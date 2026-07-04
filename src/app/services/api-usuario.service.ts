@@ -32,17 +32,17 @@ export class ApiUsuarioService {
     return firstValueFrom(this.http.patch<void>(`/api/usuarios/${id}/reactivar`, {}));
   }
 
-  /** Convierte un UsuarioResponse del backend a modelo local (Dexie) */
+  /** Convierte un UsuarioResponse del backend a modelo local (RxDB) */
   static toLocal(resp: UsuarioResponse): Usuario {
     return {
-      id: resp.id,
-      created_at: new Date().toISOString(),
+      id: String(resp.id),
       nombre: resp.nombre,
       apellido: resp.apellido,
       dni: resp.dni,
       telefono: resp.telefono ?? '',
       direccion: resp.direccion ?? '',
       activo: resp.activo,
+      updatedAt: new Date().toISOString(),
     };
   }
 }
