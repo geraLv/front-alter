@@ -73,7 +73,11 @@ export class ReplicationService {
               : lastCheckpoint ?? { updatedAt: '', id: '' };
 
             return { documents, checkpoint };
-          } catch (error) {
+          } catch (error: any) {
+            if (error.status === 0 || !navigator.onLine) {
+              console.warn('[ReplicationService] Dispositivo offline, pausa temporal en pull de usuarios.');
+              throw error;
+            }
             console.error('[ReplicationService] Error al hacer pull de usuarios:', error);
             throw error;
           }
@@ -117,7 +121,11 @@ export class ReplicationService {
               : lastCheckpoint ?? { updatedAt: '', id: '' };
 
             return { documents, checkpoint };
-          } catch (error) {
+          } catch (error: any) {
+            if (error.status === 0 || !navigator.onLine) {
+              console.warn('[ReplicationService] Dispositivo offline, pausa temporal en pull de garrafas.');
+              throw error;
+            }
             console.error('[ReplicationService] Error al hacer pull de garrafas:', error);
             throw error;
           }
@@ -172,7 +180,11 @@ export class ReplicationService {
               : lastCheckpoint ?? { updatedAt: '', id: '' };
 
             return { documents, checkpoint };
-          } catch (error) {
+          } catch (error: any) {
+            if (error.status === 0 || !navigator.onLine) {
+              console.warn('[ReplicationService] Dispositivo offline, pausa temporal en pull de pedidos.');
+              throw error;
+            }
             console.error('[ReplicationService] Error al hacer pull de pedidos:', error);
             throw error;
           }
@@ -235,7 +247,11 @@ export class ReplicationService {
 
             // No hay conflictos en este modelo — el server acepta o rechaza
             return [];
-          } catch (error) {
+          } catch (error: any) {
+            if (error.status === 0 || !navigator.onLine) {
+              console.warn('[ReplicationService] Dispositivo offline, los pedidos se sincronizarán cuando vuelva la conexión.');
+              throw error; // Throw para que RxDB lo reintente, pero sin mostrar toast
+            }
             console.error('[ReplicationService] Error al hacer push de pedidos:', error);
             this.toast.error('No se pudo sincronizar pedidos con el servidor.');
             throw error;
@@ -251,8 +267,14 @@ export class ReplicationService {
   // ─── Helpers ───
 
   private registrarEventos(state: RxReplicationState<any, any>, nombre: string): void {
-    state.error$.subscribe((err) => {
-      console.error(`[ReplicationService] Error en replicación de ${nombre}:`, err);
+    state.error$.subscribe((err: any) => {
+      // Ignorar errores RC_PUSH y RC_PULL si son por falta de red (offline)
+      const isNetworkError = err.parameters?.errors?.status === 0 || err.parameters?.errors?.name === 'HttpErrorResponse' || !navigator.onLine;
+      if (isNetworkError) {
+         console.warn(`[ReplicationService] Pausa temporal en replicación de ${nombre} por falta de red.`);
+      } else {
+         console.error(`[ReplicationService] Error en replicación de ${nombre}:`, err);
+      }
     });
     state.active$.subscribe((active) => {
       if (active) {
